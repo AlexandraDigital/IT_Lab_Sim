@@ -1,26 +1,32 @@
-// src/components/Build.jsx
 import React from 'react';
-import { images } from '../assets/images';
 
 export default function Build({ build, removeFromBuild }) {
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const comp = JSON.parse(e.dataTransfer.getData('component'));
+    // Check if already in build
+    if (!build.find(c => c.name === comp.name && c.type === comp.type)) {
+      removeFromBuild(null); // placeholder for add function in App
+      // In App, you should call addToBuild(comp)
+      // We'll handle this via a prop callback
+    }
+  };
+
+  const handleDragOver = (e) => e.preventDefault();
+
   return (
-    <div>
-      <h2>Current Build</h2>
-      <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-        {build.map(comp => (
-          <div key={comp.id} className="card">
-            <img
-              src={images[comp.type]}
-              alt={comp.type}
-              width={64}
-              height={64}
-              style={{ marginBottom: '8px' }}
-            />
-            <strong>{comp.type}</strong>: {comp.name}
-            <br />
-            <button onClick={() => removeFromBuild(comp.id)} style={{ marginTop: '8px' }}>
-              Remove
-            </button>
+    <div className="build"
+         onDrop={(e) => e.preventDefault()} // Drag-drop handled in App for real add
+         onDragOver={handleDragOver}
+    >
+      <h2>Build</h2>
+      {build.length === 0 && <p>Drag components here to start your build</p>}
+      <div className="component-list">
+        {build.map((comp) => (
+          <div key={comp.id} className="component card">
+            {comp.name} ({comp.type})
+            <button className="remove-btn" onClick={() => removeFromBuild(comp.id)}>x</button>
           </div>
         ))}
       </div>
