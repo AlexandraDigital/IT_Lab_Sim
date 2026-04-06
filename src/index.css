@@ -52,3 +52,29 @@ body {
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
+.component-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.component {
+  padding: 10px;
+  border-radius: 8px;
+  background: #f0f2f5;
+  cursor: grab;
+  user-select: none;
+}
+
+.component:active {
+  cursor: grabbing;
+}
+
+.remove-btn {
+  margin-left: 10px;
+  background: #ff4d4f;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
