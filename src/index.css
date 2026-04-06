@@ -1,47 +1,54 @@
 body {
   font-family: 'Inter', sans-serif;
-  background: #f0f2f5;
+  background: #f5f7fa;
   margin: 0;
   padding: 0;
 }
 
-#root {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 20px;
-}
-
-h1, h2 {
-  color: #1f2937;
-}
-
-button {
-  cursor: pointer;
-}
-
-.card {
-  background: white;
-  border-radius: 10px;
-  padding: 15px;
-  margin: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
 .app-container {
   max-width: 1200px;
   margin: 0 auto;
-  width: 100%;
+  padding: 20px;
+}
+
+.main-layout {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 180px;
+}
+
+.tab {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #e0e4e8;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tab.active {
+  background: #007bff;
+  color: white;
+}
+
+.tab:hover {
+  background: #cfd4da;
+}
+
+.main-content {
+  flex: 1;
 }
 
 .card {
   background: white;
-  border-radius: 10px;
-  padding: 15px;
-  margin: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  transition: 0.2s ease;
-}
-
-.card:hover {
-  transform: translateY(-4px);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
