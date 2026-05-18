@@ -1,5 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 const CERTS = [
   { id: "aplus", label: "A+", color: "#00ff88", desc: "Hardware, OS, Troubleshooting" },
   { id: "netplus", label: "Network+", color: "#00cfff", desc: "Networking, Protocols, Infrastructure" },
@@ -55,8 +60,53 @@ export default function ITLabSimulator() {
   const [error, setError] = useState("");
   const [sessionScore, setSessionScore] = useState({ correct: 0, total: 0 });
   const [phase, setPhase] = useState("setup");
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
   const terminalRef = useRef(null);
   const inputRef = useRef(null);
+
+  // PWA Installation Setup
+  useEffect(() => {
+    // Register service worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/service-worker.js")
+        .then((reg) => console.log("Service Worker registered"))
+        .catch((err) => console.log("Service Worker registration failed:", err));
+    }
+
+    // Listen for beforeinstallprompt
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    // Check if app is already installed
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+    }
+
+    window.addEventListener("appinstalled", () => {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+    });
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === "accepted") {
+      setIsInstalled(true);
+    }
+    setInstallPrompt(null);
+  };
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -146,6 +196,17 @@ export default function ITLabSimulator() {
       <div style={s.root}>
         <div style={s.scanlines} />
         <div style={s.setupContainer}>
+          <div style={s.installBanner}>
+            {installPrompt && !isInstalled && (
+              <button style={s.installBtn} onClick={handleInstallClick}>
+                📱 Install App for Offline Access
+              </button>
+            )}
+            {isInstalled && (
+              <div style={s.installedMsg}>✅ App installed! Works offline</div>
+            )}
+          </div>
+
           <div style={s.logo}>
             <span style={s.logoIcon}>⬡</span>
             <div>
@@ -225,6 +286,9 @@ export default function ITLabSimulator() {
         </div>
         <div style={s.headerRight}>
           <div style={s.scoreBox}>Score: <span style={{ color: "#00ff88" }}>{sessionScore.correct}</span>/{sessionScore.total}</div>
+          {installPrompt && !isInstalled && (
+            <button style={s.headerInstallBtn} onClick={handleInstallClick}>📱 Install</button>
+          )}
           <button style={s.resetBtn} onClick={resetLab}>↩ RESET</button>
         </div>
       </div>
@@ -299,6 +363,9 @@ const s = {
   root: { position:"relative", minHeight:"100vh", background:"#08090f", fontFamily:"'JetBrains Mono',monospace", color:"#c8ffd4", overflow:"hidden", display:"flex", flexDirection:"column" },
   scanlines: { position:"fixed", top:0, left:0, right:0, bottom:0, background:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,100,0.015) 2px,rgba(0,255,100,0.015) 4px)", pointerEvents:"none", zIndex:1 },
   setupContainer: { maxWidth:680, margin:"0 auto", padding:"48px 24px", zIndex:2, position:"relative", animation:"fadeIn 0.4s ease" },
+  installBanner: { marginBottom:20, display:"flex", justifyContent:"center" },
+  installBtn: { background:"linear-gradient(135deg,#003a2e,#00ff88 200%)", border:"1px solid #00ff88", borderRadius:4, color:"#00ff88", fontFamily:"'JetBrains Mono',monospace", fontSize:12, fontWeight:700, letterSpacing:1, padding:"8px 16px", cursor:"pointer", transition:"all 0.2s" },
+  installedMsg: { background:"rgba(0,255,100,0.1)", border:"1px solid #00ff88", borderRadius:4, color:"#00ff88", fontSize:12, padding:"8px 16px" },
   logo: { display:"flex", alignItems:"center", gap:16, marginBottom:40 },
   logoIcon: { fontSize:48, color:"#00ff88", lineHeight:1 },
   logoTitle: { fontFamily:"'Orbitron',sans-serif", fontSize:32, fontWeight:900, letterSpacing:4, color:"#e0ffe8" },
@@ -324,8 +391,9 @@ const s = {
   headerLeft: { display:"flex", alignItems:"center", gap:14 },
   certBadge: { border:"1px solid", borderRadius:3, padding:"2px 10px", fontFamily:"'Orbitron',sans-serif", fontSize:11, fontWeight:700, letterSpacing:2 },
   headerModel: { fontSize:10, color:"#2a5a38", letterSpacing:1 },
-  headerRight: { display:"flex", alignItems:"center", gap:14 },
+  headerRight: { display:"flex", alignItems:"center", gap:10 },
   scoreBox: { fontSize:12, color:"#2a6a38" },
+  headerInstallBtn: { background:"rgba(0,255,100,0.08)", border:"1px solid #00ff88", borderRadius:3, color:"#00ff88", fontFamily:"'JetBrains Mono',monospace", fontSize:10, padding:"3px 8px", cursor:"pointer", transition:"all 0.15s" },
   resetBtn: { background:"transparent", border:"1px solid #1a3a24", borderRadius:3, color:"#44885a", fontFamily:"'JetBrains Mono',monospace", fontSize:11, padding:"4px 10px", cursor:"pointer" },
   terminal: { flex:1, overflowY:"auto", padding:"20px 24px", zIndex:2, position:"relative", background:"linear-gradient(180deg,#08090f 0%,#090c0f 100%)", minHeight:0 },
   userLine: { display:"flex", alignItems:"flex-start", marginBottom:4 },
