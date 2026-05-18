@@ -1,10 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
-
+// PWA Install Event - handled as a regular Event object
 const CERTS = [
   { id: "aplus", label: "A+", color: "#00ff88", desc: "Hardware, OS, Troubleshooting" },
   { id: "netplus", label: "Network+", color: "#00cfff", desc: "Networking, Protocols, Infrastructure" },
