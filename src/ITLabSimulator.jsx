@@ -58,12 +58,12 @@ export default function ITLabSimulator() {
   const [phase, setPhase] = useState("setup");
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [saveFlash, setSaveFlash] = useState(false);
   const terminalRef = useRef(null);
   const inputRef = useRef(null);
 
   // PWA Installation Setup
   useEffect(() => {
-    // Register service worker
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/service-worker.js")
@@ -71,7 +71,6 @@ export default function ITLabSimulator() {
         .catch((err) => console.log("Service Worker registration failed:", err));
     }
 
-    // Listen for beforeinstallprompt
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setInstallPrompt(e);
@@ -79,7 +78,6 @@ export default function ITLabSimulator() {
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
-    // Check if app is already installed
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
     }
@@ -98,9 +96,7 @@ export default function ITLabSimulator() {
     if (!installPrompt) return;
     await installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
-    if (outcome === "accepted") {
-      setIsInstalled(true);
-    }
+    if (outcome === "accepted") setIsInstalled(true);
     setInstallPrompt(null);
   };
 
@@ -114,8 +110,6 @@ export default function ITLabSimulator() {
     if (phase === "lab" && inputRef.current) inputRef.current.focus();
   }, [phase]);
 
-  // Hits the Cloudflare Pages Function at /api/groq
-  // GROQ_API_KEY is stored as a Cloudflare env var — never exposed to the browser
   const callGroq = async (msgs) => {
     const response = await fetch("/api/groq", {
       method: "POST",
@@ -180,6 +174,40 @@ export default function ITLabSimulator() {
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
+  };
+
+  // ── Save Session ──────────────────────────────────────────────────────────
+  const saveSession = () => {
+    if (messages.length === 0) return;
+
+    const divider = "─".repeat(60);
+    const header = [
+      "IT Lab Simulator — Session Transcript",
+      `Certification : CompTIA ${selectedCert?.label}`,
+      `Model         : ${GROQ_MODELS.find(m => m.id === selectedModel)?.label}`,
+      `Score         : ${sessionScore.correct} / ${sessionScore.total}`,
+      `Saved         : ${new Date().toLocaleString()}`,
+      divider,
+      "",
+    ].join("\n");
+
+    const body = messages.map(msg =>
+      msg.role === "user"
+        ? `student@labsim:~$ ${msg.content}`
+        : `[LAB-AI]\n${msg.content}`
+    ).join("\n\n");
+
+    const blob = new Blob([header + body], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `labsim-${selectedCert?.id}-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    // Brief visual feedback
+    setSaveFlash(true);
+    setTimeout(() => setSaveFlash(false), 1500);
   };
 
   const resetLab = () => {
@@ -285,6 +313,20 @@ export default function ITLabSimulator() {
           {installPrompt && !isInstalled && (
             <button style={s.headerInstallBtn} onClick={handleInstallClick}>📱 Install</button>
           )}
+          {/* ── Save Button ── */}
+          <button
+            style={{
+              ...s.saveBtn,
+              ...(saveFlash ? s.saveBtnFlash : {}),
+              opacity: messages.length === 0 ? 0.35 : 1,
+              cursor: messages.length === 0 ? "not-allowed" : "pointer",
+            }}
+            onClick={saveSession}
+            disabled={messages.length === 0}
+            title="Download session transcript as .txt"
+          >
+            {saveFlash ? "✓ SAVED" : "💾 SAVE"}
+          </button>
           <button style={s.resetBtn} onClick={resetLab}>↩ RESET</button>
         </div>
       </div>
@@ -390,6 +432,8 @@ const s = {
   headerRight: { display:"flex", alignItems:"center", gap:10 },
   scoreBox: { fontSize:12, color:"#2a6a38" },
   headerInstallBtn: { background:"rgba(0,255,100,0.08)", border:"1px solid #00ff88", borderRadius:3, color:"#00ff88", fontFamily:"'JetBrains Mono',monospace", fontSize:10, padding:"3px 8px", cursor:"pointer", transition:"all 0.15s" },
+  saveBtn: { background:"rgba(0,200,255,0.06)", border:"1px solid #0a4a5a", borderRadius:3, color:"#00cfff", fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:700, letterSpacing:1, padding:"4px 10px", cursor:"pointer", transition:"all 0.2s" },
+  saveBtnFlash: { background:"rgba(0,255,136,0.12)", borderColor:"#00ff88", color:"#00ff88", boxShadow:"0 0 10px rgba(0,255,136,0.25)" },
   resetBtn: { background:"transparent", border:"1px solid #1a3a24", borderRadius:3, color:"#44885a", fontFamily:"'JetBrains Mono',monospace", fontSize:11, padding:"4px 10px", cursor:"pointer" },
   terminal: { flex:1, overflowY:"auto", padding:"20px 24px", zIndex:2, position:"relative", background:"linear-gradient(180deg,#08090f 0%,#090c0f 100%)", minHeight:0 },
   userLine: { display:"flex", alignItems:"flex-start", marginBottom:4 },
